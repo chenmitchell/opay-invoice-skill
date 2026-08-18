@@ -1,0 +1,17 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🔐 回報安全性問題
+    url: https://github.com/chenmitchell/opay-invoice-skill/blob/main/SECURITY.md
+    about: 疑似金鑰外洩或其他安全性問題請勿開公開 issue，請依 SECURITY.md 的流程私下通報。
+
+  - name: 🏢 歐付寶官方客服
+    url: https://www.opay.tw/
+    about: 帳號開通、字軌配號、正式環境異常、稅務問題請找歐付寶官方，本專案為非官方的個人整理。
+
+  - name: 📖 先看看常見問題
+    url: https://github.com/chenmitchell/opay-invoice-skill/blob/main/guides/28-troubleshooting.md
+    about: RtnCode 對照、加密踩雷、AI 答出綠界 ECPay 的 CheckMacValue（歐付寶不適用）等常見狀況都寫在疑難排解指南裡。
+
+  - name: 💬 使用討論
+    url: https://github.com/chenmitchell/opay-invoice-skill/discussions
+    about: 不確定算不算 bug、想問怎麼用、想分享串接經驗，請開 Discussion。

@@ -1,0 +1,39 @@
+cff-version: 1.2.0
+title: "opay-invoice-skill：歐付寶電子發票 AI Skill（非官方個人專案）"
+message: "若您在研究、文章或專案中使用本資源，請依下列格式引用。"
+type: dataset
+authors:
+  - family-names: "Chen"
+    given-names: "Mitchell"
+    website: "https://www.mitch.tw"
+repository-code: "https://github.com/chenmitchell/opay-invoice-skill"
+url: "https://github.com/chenmitchell/opay-invoice-skill"
+abstract: >-
+  一份非官方、由 Mitchell Chen 個人撰寫與維護的繁體中文 AI Skill，協助台灣開發者
+  串接歐付寶（O'Pay）電子發票 API。涵蓋 B2C 30 支、B2B 27 支、離線電子發票 12 支，
+  合計 69 支 API 的結構化規格，並附 AES-128-CBC 加解密規格與跨語言測試向量、Python / Node.js /
+  PHP 三語言 client 模板、測試主控台、Telegram 與 Discord 維運機器人模板，以及
+  30 份整合指南。同時提供 Claude、ChatGPT、Gemini、Cursor、GitHub Copilot 與
+  OpenAI Codex 六種 AI 平台的載入檔。本專案與歐付寶電子支付股份有限公司無任何
+  從屬或合作關係，不構成法律、稅務或會計意見，亦不宣稱法規符合性；若與官方文件
+  不一致，以官方文件為準。
+keywords:
+  - "電子發票"
+  - "e-invoice"
+  - "Taiwan e-invoice"
+  - "歐付寶"
+  - "OPay"
+  - "O'Pay"
+  - "AI Skill"
+  - "LLM tooling"
+  - "API integration"
+  - "AES-128-CBC"
+  - "B2B"
+  - "B2C"
+  - "offline invoice"
+  - "traditional Chinese"
+  - "accessibility"
+  - "WCAG"
+license: MIT
+version: "1.0.0"
+date-released: "2026-08-18"

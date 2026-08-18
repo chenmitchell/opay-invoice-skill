@@ -1,0 +1,97 @@
+# =============================================================================
+# 外部連結存活檢查（每週排程，非 blocking）
+#
+# 為什麼非 blocking：外部網站掛掉不是本 repo 的錯，不應該擋住別人的 PR。
+# 但歐付寶官網改版、財政部頁面搬家會讓文件裡的連結變成死巷，
+# 所以每週跑一次、結果寫進 job summary，由維護者定期清理。
+# =============================================================================
+name: 外部連結存活檢查（每週）
+
+on:
+  schedule:
+    - cron: "17 21 * * 0"   # 每週一 05:17（台北時間 UTC+8）
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  external-links:
+    name: 外部連結存活（非 blocking）
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+
+    steps:
+      - name: 取出原始碼
+        uses: actions/checkout@v4
+
+      - name: 安裝 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 抽出全 repo 的外部連結並逐一探測
+        id: probe
+        continue-on-error: true
+        run: |
+          python3 - <<'PY' | tee /tmp/external-links.log
+          import os, re, ssl, sys, urllib.request, urllib.error
+
+          LINK = re.compile(r"!?\[[^\]]*\]\(\s*(https?://[^)\s]+?)\s*(?:\"[^\"]*\")?\)")
+          SKIP_DIRS = {".git", "node_modules", ".venv"}
+
+          urls = {}
+          for root, dirs, files in os.walk("."):
+              dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
+              for fn in files:
+                  if not fn.lower().endswith(".md"):
+                      continue
+                  p = os.path.join(root, fn)
+                  for ln, line in enumerate(open(p, encoding="utf-8"), 1):
+                      for m in LINK.finditer(line):
+                          urls.setdefault(m.group(1).rstrip(").,"), []).append(f"{p}:{ln}")
+
+          print(f"共抽出 {len(urls)} 條不重複外部連結")
+          if not urls:
+              print("❌ 守門檢查失敗：一條外部連結都沒抽到，比對規則可能壞掉了。")
+              sys.exit(1)
+
+          ctx = ssl.create_default_context()
+          bad = []
+          for url, where in sorted(urls.items()):
+              req = urllib.request.Request(
+                  url, method="HEAD",
+                  headers={"User-Agent": "opay-invoice-skill-link-check/1.0"})
+              try:
+                  with urllib.request.urlopen(req, timeout=20, context=ctx) as resp:
+                      code = resp.status
+              except urllib.error.HTTPError as e:
+                  code = e.code
+              except Exception as e:                       # noqa: BLE001
+                  code = f"ERR {type(e).__name__}"
+              ok = isinstance(code, int) and code < 400
+              print(f"  {'ok  ' if ok else '毀損'} [{code}] {url}")
+              if not ok:
+                  bad.append((url, code, where))
+
+          print("")
+          if bad:
+              print(f"⚠️ 有 {len(bad)} 條外部連結探測失敗（非 blocking，請維護者確認）：")
+              for url, code, where in bad:
+                  print(f"  · [{code}] {url}")
+                  print(f"    出現在：{', '.join(where[:5])}")
+              sys.exit(1)
+          print("✅ 全部外部連結存活。")
+          PY
+
+      - name: 寫入 job summary
+        if: always()
+        run: |
+          {
+            echo '## 外部連結存活檢查（非 blocking）'
+            echo ''
+            echo '```'
+            cat /tmp/external-links.log || echo '（沒有輸出）'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

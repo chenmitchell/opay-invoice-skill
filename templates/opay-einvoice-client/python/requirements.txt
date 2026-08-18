@@ -1,0 +1,4 @@
+# opay-einvoice-client Python 相依套件
+# 安裝：python3 -m pip install -r requirements.txt
+requests>=2.31.0        # HTTP 送出（僅需 POST + JSON）
+pycryptodome>=3.20.0    # AES-128-CBC / PKCS7 加解密（注意：不是 pycrypto，也不要與 crypto 套件並存）

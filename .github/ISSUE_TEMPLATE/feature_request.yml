@@ -1,0 +1,57 @@
+name: 💡 提議新增或改進
+description: 補一支沒收錄的 API、新增一份 guide、改進範本或檢查腳本
+title: "[Feature] "
+labels: ["enhancement", "待分類"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        本 Skill 的核心承諾是「**69 支 API 一支都不能漏**」。
+        如果你發現官方文件有本 Skill 沒收錄的 API，那不是 feature，那是 bug —— 請改開 🐛 回報錯誤。
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: 提議類型
+      options:
+        - 新增／改寫 guide（教學）
+        - 補強 reference（規格）
+        - 新增／改進 template（可執行範本）
+        - 新增／加嚴檢查腳本（scripts/）
+        - 新增 slash command（commands/）
+        - 無障礙改進（配色、純文字重述、鍵盤操作）
+        - 其他
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 你遇到的實際問題是什麼
+      description: 請寫「情境」而不是「功能」。例如「AI 每次都把折讓與作廢搞混」比「請加折讓文件」有用得多。
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 你建議怎麼做
+    validations:
+      required: true
+
+  - type: textarea
+    id: source
+    attributes:
+      label: 官方文件依據
+      description: 若涉及規格，請寫明是哪一份文件、哪一版、第幾章
+      placeholder: 《歐付寶電子發票B2C介接技術文件》V1.6.0 第 7 章
+
+  - type: checkboxes
+    id: gates
+    attributes:
+      label: 送出前確認
+      options:
+        - label: 我理解「關卡只能加嚴不能放寬」——若提議會讓 scripts/ 的檢查變鬆，需要非常充分的理由
+          required: true
+        - label: 我**沒有**在這份 issue 中貼上真實金鑰或真實發票資料
+          required: true

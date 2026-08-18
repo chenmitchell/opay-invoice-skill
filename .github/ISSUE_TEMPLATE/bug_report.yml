@@ -1,0 +1,103 @@
+name: 🐛 回報錯誤
+description: 規格寫錯、範例跑不動、AI 依本 Skill 產出的程式碼打不通 API
+title: "[Bug] "
+labels: ["bug", "待分類"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感謝回報。開始之前請先確認兩件事：
+
+        1. **絕對不要貼真實金鑰、真實統一編號、真實發票號碼、真實客戶資料。**
+           要示範請用官方測試值：特店 `2000132`、HashKey `ejCk326UnaZWKisg`、HashIV `q9jcZX8Ib9LM8wYk`。
+        2. 本 Skill 是**非官方**的個人整理。若你的問題是「歐付寶服務本身異常」，請直接找歐付寶客服。
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 問題出在哪一塊
+      options:
+        - references/（API 規格寫錯或缺欄位）
+        - guides/（教學步驟有誤或講不清楚）
+        - templates/（範本程式跑不動）
+        - test-vectors/（測試向量對不上）
+        - scripts/（檢查腳本誤判或漏判）
+        - SKILL.md / llms.txt / 六份轉接檔（AI 讀不到或讀錯）
+        - 其他
+    validations:
+      required: true
+
+  - type: dropdown
+    id: api_group
+    attributes:
+      label: 涉及哪一組 API
+      options:
+        - B2C（30 支）
+        - B2B（27 支）
+        - 離線電子發票（12 支）
+        - 加密／URLEncode（共通）
+        - 不涉及特定 API
+    validations:
+      required: true
+
+  - type: input
+    id: endpoint
+    attributes:
+      label: 具體是哪一支 API
+      description: 請填 endpoint 名稱，例如 Issue、GetAllowanceList、OfflineIssue
+      placeholder: Issue
+    validations:
+      required: false
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 你預期會發生什麼
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 實際發生了什麼
+      description: 有錯誤訊息請整段貼上（記得先把金鑰、統編、發票號碼遮掉）
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: 重現步驟
+      placeholder: |
+        1. 用 templates/opay-einvoice-client/python 呼叫 …
+        2. 傳入 …
+        3. 收到 RtnCode … 訊息 …
+    validations:
+      required: true
+
+  - type: input
+    id: doc_version
+    attributes:
+      label: 你手上的官方文件版本
+      description: 例如 B2C V1.6.0（2026-01-06）
+      placeholder: B2C V1.6.0（2026-01-06）
+
+  - type: textarea
+    id: env
+    attributes:
+      label: 環境
+      placeholder: |
+        作業系統：
+        語言與版本：Python 3.11 / Node 20 / PHP 8.2
+        AI 平台：Claude Code / Cursor / ChatGPT / Gemini / Copilot
+        環境：測試環境 einvoice-stage.opay.tw
+
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: 送出前確認
+      options:
+        - label: 我**沒有**在這份 issue 中貼上真實金鑰、真實統編、真實發票號碼或真實客戶資料
+          required: true
+        - label: 我理解本 Skill 為非官方的個人整理，一切以歐付寶官方文件為準
+          required: true

@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<!--
+  console.html — 歐付寶電子發票測試環境全鏈路儀表板（單檔前端）
+
+  用途：搭配 backend.py，用六步自我驗證確認加解密與環境設定，再實測唯讀 API，
+        最後（可選）開立一張測試發票驗證全鏈路。
+  對應：references/b2c-api-reference.md（CheckBarcode / CheckLoveCode /
+        GetCompanyNameByTaxID / GetInvoiceWordSetting / Issue）
+
+  無障礙設計（硬性要求，改動時請一併維持）：
+    1. 深色底白字，所有底色對白字對比 ≥ 9:1（WCAG AAA 門檻 7:1）。
+    2. 狀態一律「顏色 + 圖示 + 文字」三重編碼，不可只靠顏色。
+    3. 所有互動元素可用鍵盤操作，focus 時有 3px 白色外框（:focus-visible）。
+    4. 按鈕與輸入框最小高度 48px（觸控目標 ≥ 44px）。
+    5. 每個 input 都有對應 <label for>。
+    6. 狀態變化以 aria-live="polite" 播報。
+  不使用任何 CDN 或外部資源，全部 inline。
+-->
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>歐付寶電子發票測試主控台</title>
+<style>
+  :root {
+    --bg: #1F2937;          /* 頁面底色，白字對比 14.7:1 */
+    --card-1: #1E3A8A;      /* 10.4:1 */
+    --card-2: #3730A3;      /* 9.9:1 */
+    --card-3: #581C87;      /* 10.9:1 */
+    --card-4: #164E63;      /* 9.1:1 */
+    --card-5: #134E4A;      /* 9.5:1 */
+    --card-6: #78350F;      /* 9.1:1 */
+    --ok: #14532D;          /* 成功 9.1:1 */
+    --bad: #7F1D1D;         /* 失敗 10.0:1 */
+    --warn: #78350F;        /* 警告 9.1:1 */
+    --fg: #FFFFFF;
+    --line: rgba(255, 255, 255, 0.65);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 24px 16px 64px;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+    font-size: 17px;
+    line-height: 1.7;
+  }
+  .wrap { max-width: 1000px; margin: 0 auto; }
+  h1 { font-size: 28px; margin: 0 0 8px; }
+  h2 { font-size: 22px; margin: 40px 0 12px; border-bottom: 2px solid var(--line); padding-bottom: 8px; }
+  h3 { font-size: 19px; margin: 0 0 8px; }
+  p { margin: 8px 0; }
+  a { color: var(--fg); }
+  code, pre { font-family: "SFMono-Regular", Consolas, "Noto Sans Mono", monospace; }
+  pre {
+    background: #1F2937; border: 2px solid var(--line); border-radius: 8px;
+    padding: 12px; overflow-x: auto; font-size: 14px; white-space: pre-wrap; word-break: break-all;
+  }
+  .env {
+    background: var(--card-1); border: 2px solid var(--line); border-radius: 10px;
+    padding: 16px; margin-bottom: 16px;
+  }
+  .env.prod { background: var(--bad); }
+  .cards { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  .card {
+    border: 2px solid var(--line); border-radius: 10px; padding: 16px; background: var(--card-1);
+  }
+  .card[data-tone="1"] { background: var(--card-1); }
+  .card[data-tone="2"] { background: var(--card-2); }
+  .card[data-tone="3"] { background: var(--card-3); }
+  .card[data-tone="4"] { background: var(--card-4); }
+  .card[data-tone="5"] { background: var(--card-5); }
+  .card[data-tone="6"] { background: var(--card-6); }
+  .status {
+    display: inline-flex; align-items: center; gap: 8px;
+    border: 2px solid var(--fg); border-radius: 999px;
+    padding: 4px 14px; font-weight: 700; margin-bottom: 8px; min-height: 34px;
+  }
+  .status.pass { background: var(--ok); }
+  .status.fail { background: var(--bad); }
+  .status.warn { background: var(--warn); }
+  .status.idle { background: var(--bg); }
+  .fix {
+    background: var(--bg); border-left: 6px solid var(--fg); border-radius: 6px;
+    padding: 10px 12px; margin-top: 10px;
+  }
+  .fix::before { content: "🔧 修復建議："; font-weight: 700; }
+  button {
+    font: inherit; font-weight: 700; color: var(--fg); background: var(--card-2);
+    border: 2px solid var(--fg); border-radius: 8px;
+    min-height: 48px; min-width: 48px; padding: 10px 20px; cursor: pointer;
+  }
+  button:hover { background: var(--card-3); }
+  button[disabled] { opacity: 0.75; cursor: progress; }
+  input[type="text"], input[type="number"], input[type="email"] {
+    font: inherit; color: var(--fg); background: var(--bg);
+    border: 2px solid var(--fg); border-radius: 8px;
+    min-height: 48px; padding: 8px 12px; width: 100%;
+  }
+  input[type="checkbox"] { width: 28px; height: 28px; }
+  label { display: block; font-weight: 700; margin: 12px 0 4px; }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .checkrow { display: flex; gap: 12px; align-items: center; min-height: 48px; margin: 12px 0; }
+  .checkrow label { margin: 0; }
+  :focus-visible {
+    outline: 3px solid var(--fg);
+    outline-offset: 3px;
+    border-radius: 8px;
+  }
+  .danger {
+    background: var(--bad); border: 2px solid var(--fg); border-radius: 10px; padding: 16px; margin: 16px 0;
+  }
+  .visually-hidden {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip: rect(0 0 0 0); white-space: nowrap;
+  }
+  details { margin-top: 10px; }
+  summary { cursor: pointer; font-weight: 700; min-height: 44px; padding: 10px 0; }
+  ol.steps { padding-left: 22px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>歐付寶電子發票 · 測試環境全鏈路儀表板</h1>
+    <p>先確認加解密與環境設定正確（不連網），再實測唯讀 API，最後才開立測試發票。</p>
+    <div id="env" class="env">
+      <h3 id="env-title">環境資訊</h3>
+      <p id="env-body">讀取中…</p>
+    </div>
+  </header>
+
+  <!-- 全域狀態播報：任何操作結果都會在這裡以文字播報給螢幕閱讀器 -->
+  <p id="live-region" aria-live="polite" role="status" class="status idle">
+    <span aria-hidden="true">⏳</span><span>狀態：尚未執行任何檢查</span>
+  </p>
+
+  <section aria-labelledby="h-selftest">
+    <h2 id="h-selftest">第一關：六步自我驗證（不連外網）</h2>
+    <p>這六步全部在本機完成，不會送出任何請求到歐付寶。六步全綠再往下做。</p>
+    <div class="row">
+      <button type="button" id="btn-selftest">執行六步自我驗證</button>
+    </div>
+    <div class="cards" id="selftest-cards" style="margin-top:16px">
+      <div class="card" data-tone="1"><h3>① AES 加密向量比對</h3><p class="status idle"><span aria-hidden="true">⏳</span><span>尚未執行</span></p></div>
+      <div class="card" data-tone="2"><h3>② URLEncode .NET 校正</h3><p class="status idle"><span aria-hidden="true">⏳</span><span>尚未執行</span></p></div>
+      <div class="card" data-tone="3"><h3>③ 外層 payload 組裝</h3><p class="status idle"><span aria-hidden="true">⏳</span><span>尚未執行</span></p></div>
+      <div class="card" data-tone="4"><h3>④ Timestamp 時差檢查</h3><p class="status idle"><span aria-hidden="true">⏳</span><span>尚未執行</span></p></div>
+      <div class="card" data-tone="5"><h3>⑤ 加解密往返</h3><p class="status idle"><span aria-hidden="true">⏳</span><span>尚未執行</span></p></div>
+      <div class="card" data-tone="6"><h3>⑥ 錯誤處理路徑</h3><p class="status idle"><span aria-hidden="true">⏳</span><span>尚未執行</span></p></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-live">
+    <h2 id="h-live">第二關：唯讀 API 實測（會連到測試環境）</h2>
+    <p>以下四支都是<strong>唯讀</strong>查詢，不會產生任何發票資料，可安心重複執行。</p>
+    <div class="cards">
+      <div class="card" data-tone="1">
+        <h3>手機條碼驗證 CheckBarcode</h3>
+        <label for="in-barcode">手機條碼（格式：斜線加 7 碼）</label>
+        <input type="text" id="in-barcode" value="/ABC+123" autocomplete="off">
+        <div class="row" style="margin-top:12px"><button type="button" data-action="CheckBarcode">執行 CheckBarcode</button></div>
+        <p class="status idle" data-status="CheckBarcode"><span aria-hidden="true">⏳</span><span>尚未執行</span></p>
+        <details data-detail="CheckBarcode" hidden><summary>查看原始回應與解密結果</summary><pre></pre></details>
+      </div>
+      <div class="card" data-tone="2">
+        <h3>捐贈碼驗證 CheckLoveCode</h3>
+        <label for="in-lovecode">愛心碼／捐贈碼</label>
+        <input type="text" id="in-lovecode" value="168001" autocomplete="off">
+        <div class="row" style="margin-top:12px"><button type="button" data-action="CheckLoveCode">執行 CheckLoveCode</button></div>
+        <p class="status idle" data-status="CheckLoveCode"><span aria-hidden="true">⏳</span><span>尚未執行</span></p>
+        <details data-detail="CheckLoveCode" hidden><summary>查看原始回應與解密結果</summary><pre></pre></details>
+      </div>
+      <div class="card" data-tone="4">
+        <h3>統一編號驗證 GetCompanyNameByTaxID</h3>
+        <label for="in-taxid">統一編號（8 碼）</label>
+        <input type="text" id="in-taxid" value="53538851" autocomplete="off" inputmode="numeric">
+        <div class="row" style="margin-top:12px"><button type="button" data-action="GetCompanyNameByTaxID">執行 GetCompanyNameByTaxID</button></div>
+        <p class="status idle" data-status="GetCompanyNameByTaxID"><span aria-hidden="true">⏳</span><span>尚未執行</span></p>
+        <details data-detail="GetCompanyNameByTaxID" hidden><summary>查看原始回應與解密結果</summary><pre></pre></details>
+      </div>
+      <div class="card" data-tone="5">
+        <h3>查詢字軌 GetInvoiceWordSetting</h3>
+        <label for="in-year">發票年度（民國年，例如 115）</label>
+        <input type="text" id="in-year" value="" autocomplete="off" inputmode="numeric">
+        <label for="in-category">發票類別（1＝一般、2＝特種）</label>
+        <input type="number" id="in-category" value="1" min="1" max="2">
+        <div class="row" style="margin-top:12px"><button type="button" data-action="GetInvoiceWordSetting">執行 GetInvoiceWordSetting</button></div>
+        <p class="status idle" data-status="GetInvoiceWordSetting"><span aria-hidden="true">⏳</span><span>尚未執行</span></p>
+        <details data-detail="GetInvoiceWordSetting" hidden><summary>查看原始回應與解密結果</summary><pre></pre></details>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-issue">
+    <h2 id="h-issue">第三關：開立一張測試發票</h2>
+    <div class="danger">
+      <p><strong><span aria-hidden="true">⚠️</span> 警告：這會在測試環境產生一張真實的發票紀錄。</strong></p>
+      <ol class="steps">
+        <li>會消耗一個字軌號碼，用掉就回不來。</li>
+        <li>開出去的發票<strong>無法刪除</strong>，只能作廢（Invalid）。</li>
+        <li>後端需在 <code>.env</code> 設定 <code>OPAY_ALLOW_ISSUE_DEMO=true</code> 才會放行。</li>
+      </ol>
+    </div>
+    <div class="card" data-tone="6">
+      <label for="in-relate">特店自訂編號 RelateNumber（留白自動產生）</label>
+      <input type="text" id="in-relate" value="" autocomplete="off" placeholder="例如 DEMO1700000000">
+      <label for="in-amount">銷售金額 SalesAmount（含稅總額，整數）</label>
+      <input type="number" id="in-amount" value="100" min="1">
+      <label for="in-itemname">商品名稱 ItemName</label>
+      <input type="text" id="in-itemname" value="測試商品" autocomplete="off">
+      <label for="in-email">買受人 Email（選填，會實際寄出通知信）</label>
+      <input type="email" id="in-email" value="" autocomplete="off" placeholder="留白則不寄送">
+      <div class="checkrow">
+        <input type="checkbox" id="in-confirm">
+        <label for="in-confirm">我了解此操作會產生真實發票紀錄且無法復原</label>
+      </div>
+      <div class="row"><button type="button" id="btn-issue">開立測試發票</button></div>
+      <p class="status idle" data-status="issue"><span aria-hidden="true">⏳</span><span>尚未執行</span></p>
+      <details data-detail="issue" hidden><summary>查看回傳結果</summary><pre></pre></details>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var ICONS = { pass: '✅', fail: '❌', warn: '⚠️', idle: '⏳' };
+  var WORDS = { pass: '通過', fail: '失敗', warn: '警告', idle: '尚未執行' };
+
+  /** 更新一個狀態徽章：顏色 + 圖示 + 文字三重編碼 */
+  function setStatus(el, status, text) {
+    el.className = 'status ' + status;
+    el.innerHTML = '';
+    var icon = document.createElement('span');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = ICONS[status] || ICONS.idle;
+    var label = document.createElement('span');
+    label.textContent = (WORDS[status] || WORDS.idle) + '：' + text;
+    el.appendChild(icon);
+    el.appendChild(label);
+  }
+
+  /** 播報全域狀態（螢幕閱讀器會唸出來） */
+  function announce(status, text) {
+    setStatus(document.getElementById('live-region'), status, text);
+  }
+
+  function showDetail(key, payload) {
+    var box = document.querySelector('[data-detail="' + key + '"]');
+    if (!box) { return; }
+    box.hidden = false;
+    box.querySelector('pre').textContent = JSON.stringify(payload, null, 2);
+  }
+
+  function postJSON(url, body) {
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || {})
+    }).then(function (res) {
+      return res.json().catch(function () {
+        throw new Error('後端回應不是 JSON（HTTP ' + res.status + '）｜修復建議：確認 backend.py 正在執行，並看終端機是否有錯誤訊息。');
+      }).then(function (data) {
+        if (!res.ok) {
+          throw new Error(data.detail || ('後端回應 HTTP ' + res.status));
+        }
+        return data;
+      });
+    });
+  }
+
+  // --- 環境資訊 -------------------------------------------------------------
+  fetch('/api/config').then(function (r) { return r.json(); }).then(function (cfg) {
+    var box = document.getElementById('env');
+    var body = document.getElementById('env-body');
+    body.textContent = 'Host：' + cfg.host + '｜MerchantID：' + cfg.merchant_id +
+      '｜HashKey 長度：' + cfg.hash_key_length + '｜HashIV 長度：' + cfg.hash_iv_length +
+      '｜開立示範：' + (cfg.allow_issue_demo ? '已啟用' : '已停用');
+    if (cfg.is_production) {
+      box.className = 'env prod';
+      document.getElementById('env-title').textContent = '⚠️ 危險：目前指向正式環境';
+      body.textContent += '｜請立即把 OPAY_HOST 改回 https://einvoice-stage.opay.tw';
+    }
+    var year = document.getElementById('in-year');
+    if (!year.value) { year.value = String(new Date().getFullYear() - 1911); }
+  }).catch(function (err) {
+    document.getElementById('env-body').textContent = '無法取得環境資訊：' + err.message +
+      '｜修復建議：確認 backend.py 已啟動（python3 -m uvicorn backend:app --port 8080）。';
+  });
+
+  // --- 第一關：六步自我驗證 --------------------------------------------------
+  document.getElementById('btn-selftest').addEventListener('click', function () {
+    var btn = this;
+    btn.disabled = true;
+    announce('idle', '正在執行六步自我驗證…');
+    postJSON('/api/selftest', {}).then(function (data) {
+      var cards = document.querySelectorAll('#selftest-cards .card');
+      data.steps.forEach(function (step, i) {
+        var card = cards[i];
+        if (!card) { return; }
+        card.innerHTML = '';
+        var h = document.createElement('h3');
+        h.textContent = '①②③④⑤⑥'.charAt(i) + ' ' + step.title;
+        card.appendChild(h);
+        var badge = document.createElement('p');
+        card.appendChild(badge);
+        setStatus(badge, step.status, step.message);
+        if (step.fix) {
+          var fix = document.createElement('p');
+          fix.className = 'fix';
+          fix.appendChild(document.createTextNode(step.fix));
+          card.appendChild(fix);
+        }
+        if (step.detail) {
+          var det = document.createElement('details');
+          var sum = document.createElement('summary');
+          sum.textContent = '查看細節';
+          var pre = document.createElement('pre');
+          pre.textContent = JSON.stringify(step.detail, null, 2);
+          det.appendChild(sum);
+          det.appendChild(pre);
+          card.appendChild(det);
+        }
+      });
+      var failed = data.steps.filter(function (s) { return s.status === 'fail'; }).length;
+      var warned = data.steps.filter(function (s) { return s.status === 'warn'; }).length;
+      if (failed) {
+        announce('fail', '六步自我驗證有 ' + failed + ' 項失敗，請先依各卡片的修復建議處理。');
+      } else if (warned) {
+        announce('warn', '六步自我驗證通過，但有 ' + warned + ' 項警告，建議先處理再往下做。');
+      } else {
+        announce('pass', '六步自我驗證全部通過，可以進行第二關唯讀 API 實測。');
+      }
+    }).catch(function (err) {
+      announce('fail', err.message);
+    }).finally(function () {
+      btn.disabled = false;
+    });
+  });
+
+  // --- 第二關：唯讀 API -----------------------------------------------------
+  Array.prototype.forEach.call(document.querySelectorAll('button[data-action]'), function (btn) {
+    btn.addEventListener('click', function () {
+      var action = btn.getAttribute('data-action');
+      var badge = document.querySelector('[data-status="' + action + '"]');
+      var body = {};
+      if (action === 'CheckBarcode') { body.barcode = document.getElementById('in-barcode').value.trim(); }
+      if (action === 'CheckLoveCode') { body.love_code = document.getElementById('in-lovecode').value.trim(); }
+      if (action === 'GetCompanyNameByTaxID') { body.tax_id = document.getElementById('in-taxid').value.trim(); }
+      if (action === 'GetInvoiceWordSetting') {
+        body.invoice_year = document.getElementById('in-year').value.trim();
+        body.invoice_category = Number(document.getElementById('in-category').value) || 1;
+      }
+      btn.disabled = true;
+      setStatus(badge, 'idle', '執行中…');
+      announce('idle', '正在呼叫 ' + action + '…');
+      postJSON('/api/live/' + action, body).then(function (data) {
+        showDetail(action, data);
+        if (data.ok) {
+          setStatus(badge, 'pass', 'TransCode=1、RtnCode=1，' + (data.rtn_msg || '查詢成功'));
+          announce('pass', action + ' 成功：TransCode=1、RtnCode=1。');
+        } else {
+          setStatus(badge, 'fail', data.error || '失敗');
+          announce('fail', action + ' 失敗：' + (data.error || '未知錯誤'));
+        }
+      }).catch(function (err) {
+        setStatus(badge, 'fail', err.message);
+        announce('fail', action + ' 失敗：' + err.message);
+      }).finally(function () {
+        btn.disabled = false;
+      });
+    });
+  });
+
+  // --- 第三關：開立測試發票 --------------------------------------------------
+  document.getElementById('btn-issue').addEventListener('click', function () {
+    var btn = this;
+    var badge = document.querySelector('[data-status="issue"]');
+    var confirmed = document.getElementById('in-confirm').checked;
+    if (!confirmed) {
+      setStatus(badge, 'warn', '請先勾選確認框：此操作會產生真實發票紀錄且無法復原。');
+      announce('warn', '尚未勾選確認框，未送出開立請求。');
+      document.getElementById('in-confirm').focus();
+      return;
+    }
+    if (!window.confirm('確定要開立測試發票嗎？\n這會在測試環境產生一張真實發票、消耗一個字軌號碼，且只能作廢無法刪除。')) {
+      setStatus(badge, 'idle', '已取消，未送出任何請求。');
+      announce('idle', '已取消開立。');
+      return;
+    }
+    var body = {
+      confirm: true,
+      relate_number: document.getElementById('in-relate').value.trim() || null,
+      sales_amount: Number(document.getElementById('in-amount').value) || 100,
+      item_name: document.getElementById('in-itemname').value.trim() || '測試商品',
+      customer_email: document.getElementById('in-email').value.trim() || null
+    };
+    btn.disabled = true;
+    setStatus(badge, 'idle', '開立中…');
+    announce('idle', '正在開立測試發票…');
+    postJSON('/api/issue-demo', body).then(function (data) {
+      showDetail('issue', data);
+      if (data.ok) {
+        var no = (data.result && data.result.InvoiceNo) || '（回傳未含發票號碼）';
+        setStatus(badge, 'pass', '已開立發票號碼 ' + no + '，此紀錄無法刪除，只能作廢。');
+        announce('pass', '測試發票開立成功，發票號碼 ' + no + '。');
+      } else {
+        setStatus(badge, 'fail', data.error || '開立失敗');
+        announce('fail', '測試發票開立失敗：' + (data.error || '未知錯誤'));
+      }
+    }).catch(function (err) {
+      setStatus(badge, 'fail', err.message);
+      announce('fail', '測試發票開立失敗：' + err.message);
+    }).finally(function () {
+      btn.disabled = false;
+    });
+  });
+})();
+</script>
+</body>
+</html>

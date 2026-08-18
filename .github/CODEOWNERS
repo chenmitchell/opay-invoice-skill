@@ -1,0 +1,39 @@
+# =============================================================================
+# CODEOWNERS
+#
+# 這裡指定的路徑，PR 必須由對應的 owner review 才能合併。
+# 越是「錯了會讓使用者開錯發票」的路徑，越需要有人守。
+#
+# 目前由維護者本人擔任所有路徑的 code owner；日後有共同維護者再改為團隊（例如 @your-org/einvoice-maintainers）。
+# =============================================================================
+
+# 預設：所有變更
+*                               @chenmitchell
+
+# SSOT 與獨立檢查機制：改這裡等於改變本 repo 的承諾，一定要 review
+/references/api-coverage.json   @chenmitchell
+/scripts/                       @chenmitchell
+/.github/                       @chenmitchell
+
+# API 規格：寫錯會讓使用者送出錯誤的發票資料
+/references/                    @chenmitchell
+
+# 加密與測試向量：整個 Skill 的正確性根基
+/references/encryption-aes.md   @chenmitchell
+/test-vectors/                  @chenmitchell
+
+# 可執行範本：使用者會直接複製貼上
+/templates/                     @chenmitchell
+
+# AI 入口與轉接檔：AI 讀錯這裡，後面全部都會錯
+/SKILL.md                       @chenmitchell
+/llms.txt                       @chenmitchell
+/CLAUDE.md                      @chenmitchell
+/AGENTS.md                      @chenmitchell
+/GEMINI.md                      @chenmitchell
+/SKILL_OPENAI.md                @chenmitchell
+/vscode_copilot.md              @chenmitchell
+/google_AI_studio.md            @chenmitchell
+
+# 安全政策
+/SECURITY.md                    @chenmitchell

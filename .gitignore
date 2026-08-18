@@ -1,0 +1,98 @@
+# =============================================================================
+# .gitignore
+#
+# 這個檔案不只是「不要看到雜訊」，它是安全機制的一部分。
+# scripts/validate-no-leaks.sh 會檢查 .env 有沒有被追蹤；
+# 但最好的狀況是它根本沒機會被 git add。
+# =============================================================================
+
+# ---- 金鑰與機密（最重要，放最上面） -----------------------------------------
+# .env 只能存在於各人的本機。範本一律用 .env.example，且值必須留空或為官方測試值。
+.env
+.env.*
+!.env.example
+!*.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+*.jks
+*.keystore
+secrets.json
+credentials.json
+service-account*.json
+
+# ---- 官方技術文件與真實發票檔 -----------------------------------------------
+# 歐付寶的三份技術文件（i100 / i200 / i301）是 .docx，有授權疑慮，不可 commit。
+# 真實發票、對帳單也常以 .docx / .xlsx 形式流出，一律擋掉。
+# 本 repo 的規格內容以「社群整理的 markdown」形式存在 references/。
+*.docx
+*.doc
+*發票*.docx
+*發票*.xlsx
+*發票*.pdf
+*對帳*.xlsx
+*.xls
+*.xlsx
+
+# ---- Python -----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+ENV/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# ---- Node.js ----------------------------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+package-lock.json.bak
+
+# ---- PHP --------------------------------------------------------------------
+vendor/
+composer.phar
+
+# ---- 執行期產物 -------------------------------------------------------------
+*.log
+audit.log
+bot-state.sqlite3
+*.sqlite3
+*.sqlite3-journal
+*.db
+
+# ---- 編輯器與作業系統 -------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+desktop.ini
+.idea/
+.vscode/
+!.vscode/extensions.json
+*.swp
+*.swo
+*~
+
+# ---- 暫存 -------------------------------------------------------------------
+tmp/
+temp/
+.cache/
+*.tmp
+*.bak
+*.orig

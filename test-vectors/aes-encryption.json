@@ -1,0 +1,70 @@
+{
+  "$schema_note": "歐付寶電子發票 AES 加解密測試向量 — 本檔為此 Skill 的唯一事實來源(SSOT)，verify.py 與 verify-node.js 皆讀取本檔。",
+  "spec": {
+    "algorithm": "AES-128-CBC",
+    "padding": "PKCS7",
+    "key_bits": 128,
+    "encode_order": [
+      "1. 組出明文 JSON 字串",
+      "2. opay_urlencode（.NET 慣例）",
+      "3. AES-128-CBC / PKCS7 加密",
+      "4. Base64 編碼"
+    ],
+    "decode_order": [
+      "1. Base64 解碼",
+      "2. AES-128-CBC / PKCS7 解密",
+      "3. opay_urldecode（.NET 慣例）",
+      "4. JSON parse"
+    ],
+    "urlencode": {
+      "unreserved": "A-Z a-z 0-9 - _ . ! * ( )",
+      "space": "+",
+      "other": "UTF-8 位元組逐一編為 %XX，十六進位使用大寫",
+      "hex_case_note": "i100 附錄 2 的表格以小寫書寫（如 %7b），但 i100 附錄 3 的加密範例與其密文只有在使用大寫（%7B）時才能重現。本 Skill 一律採大寫。"
+    },
+    "official_source": "i100 附錄 3 / i200 附錄 2 / i301 附錄 3"
+  },
+  "disclaimer": "source=official 者逐字取自官方文件；source=derived 者為本專案依官方規格自行推導並經 Python / Node.js 雙語言交叉驗證，非官方發布，若與官方不一致以官方為準。",
+  "vectors": [
+    {
+      "id": "official-appendix3",
+      "source": "official",
+      "description": "官方測試向量，逐字照抄自 i100 附錄 3／i200 附錄 2／i301 附錄 3（三份文件內容完全相同）。釘住的行為：明文 JSON → URLEncode → AES-128-CBC/PKCS7 → Base64 這條順序，以及 URLEncode 產出的十六進位為『大寫』。這是唯一具官方效力的向量。",
+      "key": "ejCk326UnaZWKisg",
+      "iv": "q9jcZX8Ib9LM8wYk",
+      "plaintext": "{\"Name\":\"Test\",\"ID\":\"A123456789\"}",
+      "urlencoded": "%7B%22Name%22%3A%22Test%22%2C%22ID%22%3A%22A123456789%22%7D",
+      "ciphertext": "uvI4yrErM37XNQkXGAgRgJAgHn2t72jahaMZzYhWL1HmvH4WV18VJDP2i9pTbC+tby5nxVExLLFyAkbjbS2Dvg=="
+    },
+    {
+      "id": "dotnet-space-and-safe-symbols",
+      "source": "derived",
+      "description": "本專案自行推導。釘住 .NET URLEncode 慣例的兩個關鍵差異：(1) 半形空格編成 '+' 而非 '%20'；(2) '!' '*' '(' ')' 四個字元『不編碼』。Python 的 quote_plus(safe='') 會把 '!*()' 編成 %21%2A%28%29，PHP 的 urlencode() 同樣會編，Node 的 encodeURIComponent 則不編 '!*()' 但把空格編成 %20 —— 三種語言各錯一半，故必須逐字元校正。",
+      "key": "ejCk326UnaZWKisg",
+      "iv": "q9jcZX8Ib9LM8wYk",
+      "plaintext": "{\"ItemName\":\"Coffee Latte (Large)!\",\"Remark\":\"a*b c\"}",
+      "urlencoded": "%7B%22ItemName%22%3A%22Coffee+Latte+(Large)!%22%2C%22Remark%22%3A%22a*b+c%22%7D",
+      "ciphertext": "TFeUlV6EVzxsmT7rWBkWSyhOG7lH7Iuis4/RLpe/aC2K7IlqQDob/jfxknRxS0HtCLzzHgxchxB3V4Y01eZ1NcBtabomIIzz8zAwS1Gwp8Q="
+    },
+    {
+      "id": "utf8-chinese",
+      "source": "derived",
+      "description": "本專案自行推導。釘住中文（多位元組 UTF-8）必須先以 UTF-8 編成位元組、每個位元組再各自編成 %XX（大寫），而不是先轉 Big5 或使用其他編碼。同時混入一個空格，確認中文與 '+' 規則可以並存。發票的商品名稱、買受人名稱幾乎必然含中文，這組向量用來擋掉編碼設錯的整類問題。",
+      "key": "ejCk326UnaZWKisg",
+      "iv": "q9jcZX8Ib9LM8wYk",
+      "plaintext": "{\"CustomerName\":\"王小明\",\"ItemName\":\"拿鐵 大杯\"}",
+      "urlencoded": "%7B%22CustomerName%22%3A%22%E7%8E%8B%E5%B0%8F%E6%98%8E%22%2C%22ItemName%22%3A%22%E6%8B%BF%E9%90%B5+%E5%A4%A7%E6%9D%AF%22%7D",
+      "ciphertext": "UKZjwWDHImZ0jmFsqhYuA5ZXjLCC9dh5YvvXgoUFvzguii2hWKDCckP//2/JMsEkxUa66O0w/Ys9UIg05EiRr548ZDY2o7Yak5kbPF1lGUToVLfVGi5O6GM0w+CdPKrOVRQvezFE2TFpmwntsr4n/HXsz8FKsnpzDr/Llgx4/2g="
+    },
+    {
+      "id": "plus-tilde-percent",
+      "source": "derived",
+      "description": "本專案自行推導。釘住三個最容易被誤放行的字元：真正的 '+' 必須編成 %2B（否則與空格的 '+' 混淆，解碼後 '1+1' 會變成 '1 1'）；'~' 依附錄 2 必須編成 %7E（不在安全集合內）；'%' 必須編成 %25（否則後兩碼會被誤判為 escape 序列）。",
+      "key": "ejCk326UnaZWKisg",
+      "iv": "q9jcZX8Ib9LM8wYk",
+      "plaintext": "{\"A\":\"1+1=2\",\"B\":\"~tilde~\",\"C\":\"100%\"}",
+      "urlencoded": "%7B%22A%22%3A%221%2B1%3D2%22%2C%22B%22%3A%22%7Etilde%7E%22%2C%22C%22%3A%22100%25%22%7D",
+      "ciphertext": "9B7WOT77fpBsAgF/VL+R+Np6LX1q1+F1tinMvL0EfdRKuFRbsn4x3FfO7diNTI886eZy6O78V6MKHt96CcUeTB/IM/ISu3BbC4jbWBGGrauov2MS/bk0s1pe98tJDcrh"
+    }
+  ]
+}

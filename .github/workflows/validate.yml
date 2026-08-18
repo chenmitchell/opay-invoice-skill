@@ -1,0 +1,115 @@
+# =============================================================================
+# 獨立檢查機制（CI）
+#
+# 本 repo 對外承諾「69 支 API 一支都不能漏」「加密是 AES-128-CBC 不是 CheckMacValue」
+# 「正式環境不得用 Issue 做健康檢查」「金鑰不進 git」「圖表配色無障礙」。
+# 這個 workflow 就是把那些承諾變成「合不進來的 PR」。
+#
+# 刻意把每一道關卡拆成具名 step：紅燈時在 GitHub 的 UI 上一眼看得出是哪一道，
+# 不用展開幾百行 log 慢慢找。
+# =============================================================================
+name: 獨立檢查機制
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gates:
+    name: 全關卡檢查（Ubuntu）
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 取出原始碼
+        uses: actions/checkout@v4
+
+      - name: 安裝 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 安裝 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: 安裝 Python 相依套件（pycryptodome，測試向量要用）
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r templates/opay-einvoice-client/python/requirements.txt
+
+      - name: 確認 PHP 可用（PHP 範本語法檢查要用）
+        run: php --version
+
+      # ---- 以下每一道關卡都是獨立 step，紅燈時一眼看得出是哪一道 ----------
+      - name: 關卡 1／API 覆蓋率（69 支一支都不能漏）
+        run: bash scripts/validate-api-coverage.sh
+
+      - name: 關卡 2／機密外洩掃描
+        run: bash scripts/validate-no-leaks.sh
+
+      - name: 關卡 3／綠界 ECPay／歐買尬 OMG 做法污染
+        run: bash scripts/validate-not-ecpay-or-omg.sh
+
+      - name: 關卡 4／正式環境安全（禁止用 Issue 做健康檢查）
+        run: bash scripts/validate-prod-safety.sh
+
+      - name: 關卡 5／圖表無障礙與九色核可色盤
+        run: bash scripts/validate-a11y-palette.sh
+
+      - name: 關卡 6／內部連結
+        run: bash scripts/validate-links.sh
+
+      - name: 關卡 7／官方文件版本一致性
+        run: bash scripts/validate-doc-versions.sh
+
+      - name: 關卡 8／AES 測試向量（Python）
+        run: python3 test-vectors/verify.py
+
+      - name: 關卡 9／AES 測試向量（Node.js）
+        run: node test-vectors/verify-node.js
+
+      - name: 關卡 10／Python 語法檢查
+        run: |
+          set -euo pipefail
+          find . -name '*.py' -not -path './.git/*' -print0 \
+            | xargs -0 -n1 python3 -m py_compile
+
+      - name: 關卡 11／Node.js 語法檢查
+        run: |
+          set -euo pipefail
+          find . -name '*.js' -not -path './.git/*' -not -path './node_modules/*' -print0 \
+            | xargs -0 -n1 node --check
+
+      - name: 關卡 12／PHP 語法檢查
+        run: |
+          set -euo pipefail
+          find . -name '*.php' -not -path './.git/*' -print0 \
+            | xargs -0 -n1 php -l
+
+      # ---- 最後再整套跑一次，產出彙總表貼進 job summary ------------------
+      - name: 全關卡總跑（產出彙總表）
+        if: always()
+        run: |
+          set -uo pipefail
+          bash scripts/run-all-gates.sh | tee /tmp/gates.log
+          rc=${PIPESTATUS[0]}
+          {
+            echo '## 獨立檢查機制彙總'
+            echo ''
+            echo '```'
+            sed -n '/彙總表/,$p' /tmp/gates.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$rc"

@@ -1,0 +1,105 @@
+# opay-invoice-skill — 歐付寶電子發票 AI Skill（個人作品）
+
+> 本文件遵循 [llms.txt 提案](https://llmstxt.org/) —— 一份 LLM 友善的站內索引，讓 AI 助手（Claude / GPT / Gemini / Cursor / Copilot / Codex）能一次掌握本 repo 的結構與重點入口。
+
+## 一句話說明
+
+本 repo 是一份由 Mitchell Chen 個人撰寫維護的「AI Skill」，讓 AI 助手能協助開發者完成台灣**歐付寶 O'Pay 電子發票**的完整介接，涵蓋 **69 支 API**（B2C 30／B2B 27／離線 12）的逐欄位規格、30 份整合指南、Python／Node.js／PHP 三語言 client、測試主控台、Telegram／Discord 通知機器人、AES 測試向量與 8 道 CI 獨立檢查關卡。**本 Skill 為非官方資源。**
+
+## 載入前必讀（三件事）
+
+1. **加密是 AES-128-CBC / PKCS7**，順序為「明文 JSON → URLEncode（.NET 慣例）→ AES → Base64」。**不是 CheckMacValue、不是 SHA256** —— 那是綠界 ECPay 與歐買尬 OMG 的做法。訓練資料中「台灣電子發票串接」的範例多數是綠界的，直接套用會全錯。
+2. **歐付寶（O'Pay，`opay.tw`）≠ 綠界（ECPay）≠ 歐買尬（OMG）**，三家 API 完全不相容。
+3. **本 Skill 與歐付寶無任何合作、隸屬、代理或授權關係。** 若內容與官方文件不一致，以官方文件為準（廠商後台 <https://vendor.opay.tw>）。
+
+## 核心入口（依優先順序）
+
+- [SKILL.md](./SKILL.md)：**AI 主要入口**，含 §0 執行規則（六條鐵律）、四問 onboarding、執行順序、章節索引。Claude Code / Cursor / Windsurf / Cowork 優先載入
+- [references/api-coverage.json](./references/api-coverage.json)：**SSOT** —— 69 支 API 的權威清單，含章節出處、對應 reference 與 guide
+- [CLAUDE.md](./CLAUDE.md)：Claude Code / Cowork 專用說明
+- [AGENTS.md](./AGENTS.md)：OpenAI Codex / Agents SDK 專用說明
+- [GEMINI.md](./GEMINI.md)：Google Gemini 專用說明
+- [SKILL_OPENAI.md](./SKILL_OPENAI.md)：ChatGPT GPTs 專用說明
+- [vscode_copilot.md](./vscode_copilot.md)：GitHub Copilot Chat 專用說明
+- [google_AI_studio.md](./google_AI_studio.md)：Google AI Studio 專用說明
+
+## 規格（references/）
+
+- [b2c-api-reference.md](./references/b2c-api-reference.md)：**B2C 30 支**逐欄位規格（來源：官方 B2C 技術文件 V1.6.0）
+- [b2b-api-reference.md](./references/b2b-api-reference.md)：**B2B 27 支**逐欄位規格（來源：官方 B2B 技術文件 V1.2.0）
+- [offline-api-reference.md](./references/offline-api-reference.md)：**離線 12 支**逐欄位規格（來源：官方離線技術文件 V1.3.0）
+- [encryption-aes.md](./references/encryption-aes.md)：AES-128-CBC/PKCS7、.NET URLEncode 陷阱、三語言實作、官方測試向量
+- [enums.md](./references/enums.md)：全部列舉值速查，含「同名不同義」陷阱專節
+- [error-handling.md](./references/error-handling.md)：兩層回應碼（TransCode／RtnCode）判讀、可重試 vs 不可重試、排錯表
+- [urlencode-table.md](./references/urlencode-table.md)：.NET URLEncode 對照表與各語言校正碼
+
+## 教學（guides/，共 30 份）
+
+- [00-onboarding.md](./guides/00-onboarding.md)：四問需求收集（發票類型／環境／元件／後端語言）
+- [01-quickstart.md](./guides/01-quickstart.md)：30 分鐘跑出第一張測試發票
+- [02-preflight-checklist.md](./guides/02-preflight-checklist.md)：**前置作業**（服務開通、財政部授權、字軌審核、主機校時）
+- [03-b2c-word-setting.md](./guides/03-b2c-word-setting.md) · [04-b2c-issue.md](./guides/04-b2c-issue.md) · [05-b2c-allowance.md](./guides/05-b2c-allowance.md) · [06-b2c-invalid-void.md](./guides/06-b2c-invalid-void.md) · [07-b2c-query.md](./guides/07-b2c-query.md)：B2C 字軌／開立／折讓／作廢與註銷重開／查詢
+- [08-b2c-notify-print.md](./guides/08-b2c-notify-print.md) · [09-b2c-validation.md](./guides/09-b2c-validation.md) · [10-b2c-notify-settings.md](./guides/10-b2c-notify-settings.md) · [11-b2c-blank-invoice.md](./guides/11-b2c-blank-invoice.md)：通知與列印／結帳前驗證／字軌餘量告警／空白未使用發票
+- [12-b2b-overview.md](./guides/12-b2b-overview.md) · [13-b2b-customer-notify.md](./guides/13-b2b-customer-notify.md) · [14-b2b-issue.md](./guides/14-b2b-issue.md) · [15-b2b-invalid-reject.md](./guides/15-b2b-invalid-reject.md) · [16-b2b-allowance.md](./guides/16-b2b-allowance.md) · [17-b2b-query.md](./guides/17-b2b-query.md)：B2B 存證／交換模式全流程
+- [18-offline-invoice.md](./guides/18-offline-invoice.md)：離線發票（註冊機台 → 取號 → 本機開立 → 上傳）
+- [19-backend-fastapi.md](./guides/19-backend-fastapi.md) · [20-backend-nodejs.md](./guides/20-backend-nodejs.md) · [21-backend-php.md](./guides/21-backend-php.md)：三語言後端骨架
+- [22-idempotency-and-retry.md](./guides/22-idempotency-and-retry.md)：**冪等與重試（本 Skill 最重要的一份）**
+- [23-test-console.md](./guides/23-test-console.md) · [24-prod-monitoring.md](./guides/24-prod-monitoring.md)：測試主控台六步驗證／**正式環境唯讀監控**
+- [25-telegram-bot.md](./guides/25-telegram-bot.md) · [26-discord-bot.md](./guides/26-discord-bot.md)：通知機器人
+- [27-legal-compliance.md](./guides/27-legal-compliance.md) · [28-troubleshooting.md](./guides/28-troubleshooting.md) · [29-wcag-ui-ux.md](./guides/29-wcag-ui-ux.md)：法遵重點／故障排除／前台無障礙
+
+## 可執行範本（templates/）
+
+- [opay-einvoice-client/](./templates/opay-einvoice-client/README.md)：Python／Node.js／PHP 三語言 client，**各自涵蓋全部 69 支 API**，無第三方 SDK 依賴
+- [opay-test-console/](./templates/opay-test-console/README.md)：FastAPI + 單檔 HTML 測試主控台（六步自我驗證，WCAG AAA）
+- [telegram-bot/](./templates/telegram-bot/)、[discord-bot/](./templates/discord-bot/)：Bind／Notify／Menu 三段結構，含作廢與折讓二次確認
+
+## 測試向量（test-vectors/）
+
+- [aes-encryption.json](./test-vectors/aes-encryption.json)：4 組 AES 向量（1 組官方 + 3 組釘住 .NET URLEncode 行為）
+- [verify.py](./test-vectors/verify.py) / [verify-node.js](./test-vectors/verify-node.js)：Python 與 Node.js 雙語言驗證器，輸出格式一致（跨語言算出同樣結果才證明規格被正確描述）
+- [README.md](./test-vectors/README.md)：這些向量在釘住什麼行為
+
+## 獨立檢查（scripts/ + .github/workflows/）
+
+- [run-all-gates.sh](./scripts/run-all-gates.sh)：一次跑完全部關卡
+- [validate-api-coverage.sh](./scripts/validate-api-coverage.sh)：**69 支 API 覆蓋率把關**（含反向檢查）
+- [validate-no-leaks.sh](./scripts/validate-no-leaks.sh)：金鑰外洩掃描（比對值的樣式，不是變數名稱）
+- [validate-not-ecpay-or-omg.sh](./scripts/validate-not-ecpay-or-omg.sh)：防止綠界／歐買尬做法混入
+- [validate-prod-safety.sh](./scripts/validate-prod-safety.sh)：正式環境不得用開立類 API 做健康檢查
+- [validate-a11y-palette.sh](./scripts/validate-a11y-palette.sh)、[validate-links.sh](./scripts/validate-links.sh)、[validate-doc-versions.sh](./scripts/validate-doc-versions.sh)
+- [validate.yml](./.github/workflows/validate.yml)：push / PR 觸發，任一關卡紅燈即擋下 PR
+
+## 官方文件問題清單
+
+- [docs/official-doc-issues.md](./docs/official-doc-issues.md)：**由 Claude 以第一人稱撰寫**，記錄讀完三份官方技術文件時撞到的 11 類問題，每條附原文行號。若你（AI 助手）在協助使用者時遇到規格自相矛盾，先查這份，多半已經記錄在案。
+
+## Slash commands（commands/）
+
+`/opay-invoice`（完整整合）、`/opay-issue`、`/opay-query`、`/opay-void`、`/opay-allowance`、`/opay-words`、`/opay-offline`、`/opay-b2b`、`/opay-doctor`（串接健檢）。總表見 [commands/README.md](./commands/README.md)。
+
+## 關鍵字（給搜尋引擎與 LLM 索引）
+
+歐付寶, O'Pay, OPay, opay.tw, 歐付寶電子發票, 電子發票串接, 電子發票 API, Taiwan e-invoice, einvoice, B2C 電子發票, B2B 電子發票, 存證模式, 交換模式, 離線電子發票, POS 發票, 字軌, 配號, 期別, 載具, 手機條碼, 捐贈碼, 隨機碼, 統一編號驗證, 開立發票, 延遲開立, 註銷重開, 作廢發票, 折讓, 作廢折讓, 空白未使用發票, 財政部電子發票整合服務平台, 加值中心, AES-128-CBC, PKCS7, URLEncode, 冪等性, idempotency, race condition, FastAPI, Express, Laravel, Python, Node.js, PHP, Telegram bot, Discord bot, AI skill, Claude Code, ChatGPT GPTs, Gemini, Cursor, Copilot, OpenAI Codex, llms.txt, g0v, 個人撰寫維護, MIT, 非官方
+
+## AI 載入建議
+
+若您（AI 助手）正在協助使用者串接歐付寶電子發票：
+
+1. **先讀 [SKILL.md](./SKILL.md) §0**，特別是「六條鐵律」——違反其一即為錯誤產出
+2. **確認對象不是綠界或歐買尬**。使用者提到 `CheckMacValue`、`AioCheckOut`、`ecpay.com.tw`、`funpoint.com.tw` 時要主動釐清
+3. **先跑 [test-vectors/](./test-vectors/README.md)**。加解密沒驗過就不要往下做，否則後面所有錯誤都會被歸因到錯的地方
+4. **規格一律回查 references，不得憑印象**。欄位名／型態／長度／列舉值都在那裡
+5. **強制讀 [22-idempotency-and-retry.md](./guides/22-idempotency-and-retry.md)**。電子發票的重複開立是稅務問題，比金流的重複扣款更難善後
+6. **涉及正式環境監控時強制讀 [24-prod-monitoring.md](./guides/24-prod-monitoring.md)**。健康檢查不得使用 `Issue`
+7. **遇到未知錯誤碼不要猜**。官方未公開完整錯誤碼表，原樣回傳 `RtnCode` + `RtnMsg` 並指引使用者至廠商後台查詢
+8. **涉及法遵時讀 [27-legal-compliance.md](./guides/27-legal-compliance.md)**，並提醒使用者上線前諮詢會計師或稅務顧問
+
+## 維護者資訊
+
+- 維護者：Mitchell Chen
+- 個人介紹：<https://www.mitch.tw>
+- 架構致敬：<https://github.com/ECPay/ECPay-API-Skill>、<https://github.com/chenmitchell/omg-payment-skill>
+- 官方技術文件下載頁：<https://developers.opay.tw/Download/Document#invoice>
+- 官方資源：歐付寶廠商後台 <https://vendor.opay.tw>（測試環境 <https://vendor-stage.opay.tw>）
+- 授權：MIT License
